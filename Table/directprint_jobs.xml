@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    This file is part of DirectPrint plugin for FacturaScripts.
+    FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+    DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+
+    Document   : directprint_jobs.xml
+    Author     : Jose Antonio Cuello Principal <yopli2000@gmail.com>
+    Description:
+        Structure of the print jobs history table.
+-->
+
+<table>
+    <column>
+        <name>creation_date</name>
+        <type>timestamp</type>
+    </column>
+    <column>
+        <name>cups_job_id</name>
+        <type>character varying(50)</type>
+    </column>
+    <column>
+        <name>error</name>
+        <type>text</type>
+    </column>
+    <column>
+        <name>filename</name>
+        <type>character varying(255)</type>
+    </column>
+    <column>
+        <name>id</name>
+        <type>serial</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>idprinter</name>
+        <type>integer</type>
+    </column>
+    <column>
+        <name>mimetype</name>
+        <type>character varying(100)</type>
+    </column>
+    <column>
+        <name>nick</name>
+        <type>character varying(50)</type>
+    </column>
+    <column>
+        <name>options</name>
+        <type>text</type>
+    </column>
+    <column>
+        <name>source_id</name>
+        <type>character varying(50)</type>
+    </column>
+    <column>
+        <name>source_model</name>
+        <type>character varying(100)</type>
+    </column>
+    <column>
+        <name>source_plugin</name>
+        <type>character varying(100)</type>
+    </column>
+    <column>
+        <name>status</name>
+        <type>character varying(20)</type>
+        <null>NO</null>
+    </column>
+    <constraint>
+        <name>directprint_jobs_pkey</name>
+        <type>PRIMARY KEY (id)</type>
+    </constraint>
+    <constraint>
+        <name>ca_directprint_jobs_printer</name>
+        <type>FOREIGN KEY (idprinter) REFERENCES directprint_printers (id) ON DELETE SET NULL ON UPDATE CASCADE</type>
+    </constraint>
+    <constraint>
+        <name>ca_directprint_jobs_user</name>
+        <type>FOREIGN KEY (nick) REFERENCES users (nick) ON DELETE SET NULL ON UPDATE CASCADE</type>
+    </constraint>
+</table>

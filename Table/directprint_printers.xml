@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    This file is part of DirectPrint plugin for FacturaScripts.
+    FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+    DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+
+    Document   : directprint_printers.xml
+    Author     : Jose Antonio Cuello Principal <yopli2000@gmail.com>
+    Description:
+        Structure of the configured printers table.
+-->
+
+<table>
+    <column>
+        <name>active</name>
+        <type>boolean</type>
+        <null>NO</null>
+        <default>true</default>
+    </column>
+    <column>
+        <name>bydefault</name>
+        <type>boolean</type>
+        <null>NO</null>
+        <default>false</default>
+    </column>
+    <column>
+        <name>copies</name>
+        <type>integer</type>
+        <null>NO</null>
+        <default>1</default>
+    </column>
+    <column>
+        <name>id</name>
+        <type>serial</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>name</name>
+        <type>character varying(100)</type>
+        <null>NO</null>
+    </column>
+    <column>
+        <name>notes</name>
+        <type>text</type>
+    </column>
+    <column>
+        <name>orientation</name>
+        <type>character varying(20)</type>
+        <null>NO</null>
+        <default>portrait</default>
+    </column>
+    <column>
+        <name>paper</name>
+        <type>character varying(20)</type>
+        <null>NO</null>
+        <default>A4</default>
+    </column>
+    <column>
+        <name>queue</name>
+        <type>character varying(100)</type>
+        <null>NO</null>
+    </column>
+    <constraint>
+        <name>directprint_printers_pkey</name>
+        <type>PRIMARY KEY (id)</type>
+    </constraint>
+    <constraint>
+        <name>uniq_directprint_printers_name</name>
+        <type>UNIQUE (name)</type>
+    </constraint>
+</table>

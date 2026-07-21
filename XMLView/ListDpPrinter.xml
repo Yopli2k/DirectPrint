@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    This file is part of DirectPrint plugin for FacturaScripts.
+    FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+    DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+
+    Document   : ListDpPrinter.xml
+    Author     : Jose Antonio Cuello Principal <yopli2000@gmail.com>
+    Description:
+        List view for the configured printers.
+-->
+
+<view>
+    <columns>
+        <column name="name" order="100">
+            <widget type="text" fieldname="name"/>
+        </column>
+        <column name="queue" order="110">
+            <widget type="text" fieldname="queue"/>
+        </column>
+        <column name="paper" order="120">
+            <widget type="text" fieldname="paper"/>
+        </column>
+        <column name="orientation" order="130">
+            <widget type="text" fieldname="orientation"/>
+        </column>
+        <column name="copies" display="right" order="140">
+            <widget type="number" fieldname="copies"/>
+        </column>
+        <column name="active" display="center" order="150">
+            <widget type="checkbox" fieldname="active"/>
+        </column>
+        <column name="default" display="center" order="160">
+            <widget type="checkbox" fieldname="bydefault"/>
+        </column>
+    </columns>
+</view>

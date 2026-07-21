@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    This file is part of DirectPrint plugin for FacturaScripts.
+    FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+    DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+
+    Document   : ListDpPrintJob.xml
+    Author     : Jose Antonio Cuello Principal <yopli2000@gmail.com>
+    Description:
+        List view for the print jobs history.
+-->
+
+<view>
+    <columns>
+        <column name="date" order="100">
+            <widget type="datetime" fieldname="creation_date"/>
+        </column>
+        <column name="printer" order="110">
+            <widget type="select" fieldname="idprinter">
+                <values source="directprint_printers" fieldcode="id" fieldtitle="name"/>
+            </widget>
+        </column>
+        <column name="user" order="120">
+            <widget type="text" fieldname="nick"/>
+        </column>
+        <column name="file" order="130">
+            <widget type="text" fieldname="filename"/>
+        </column>
+        <column name="status" order="140">
+            <widget type="text" fieldname="status"/>
+        </column>
+        <column name="cups-job-id" order="150">
+            <widget type="text" fieldname="cups_job_id"/>
+        </column>
+        <column name="common-error" order="160">
+            <widget type="text" fieldname="error"/>
+        </column>
+    </columns>
+</view>
