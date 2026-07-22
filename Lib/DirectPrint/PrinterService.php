@@ -77,10 +77,23 @@ class PrinterService
     }
 
     /**
+     * Return the indicated printer or default.
+     *
+     * @param int $printerId
+     * @return DpPrinter|null
+     */
+    public static function getPrinter(int $printerId = 0): ?DpPrinter
+    {
+        return $printerId > 0
+            ? DpPrinter::find($printerId)
+            : DpPrinter::getDefault();
+    }
+
+    /**
      * Sends binary contents to a printer, writing them first to a
      * controlled temporary file.
      *
-     * @param int $printerId
+     * @param int $printerId printer id, or 0 to use the default printer
      * @param string $contents
      * @param string $extension
      * @param array $options
@@ -102,7 +115,7 @@ class PrinterService
      * Sends a file located inside the private MyFiles folder to a printer.
      * The file is removed after being sent to CUPS.
      *
-     * @param int $printerId
+     * @param int $printerId printer id, or 0 to use the default printer
      * @param string $filePath
      * @param array $options
      * @param array $context source_plugin, source_model, source_id, filename
@@ -110,21 +123,29 @@ class PrinterService
      */
     public static function printFile(int $printerId, string $filePath, array $options = [], array $context = []): DpPrintJob
     {
-        $job = self::newJob($printerId, $context);
+        $printer = self::getPrinter($printerId);
+        if (is_null($printer)) {
+            self::deleteTemp($filePath);
+            return self::fail(
+                self::newJob($printerId, $context),
+                'directprint-printer-not-found'
+            );
+        }
+
+        $job = self::newJob($printer->id, $context);
         if (empty($job->filename)) {
             $job->filename = basename($filePath);
         }
 
-        // the printer must exist and be active
-        $printer = new DpPrinter();
-        if (false === $printer->load($printerId)) {
-            return self::fail($job, 'directprint-printer-not-found');
-        } elseif (false === (bool)$printer->active) {
+        // the printer must be active
+        if (false === (bool)$printer->active) {
+            self::deleteTemp($filePath);
             return self::fail($job, 'directprint-printer-inactive');
         }
 
         // the queue name must be valid
         if (1 !== preg_match('/^[A-Za-z0-9._-]+$/', (string)$printer->queue)) {
+            self::deleteTemp($filePath);
             return self::fail($job, 'directprint-invalid-queue');
         }
 
@@ -181,7 +202,7 @@ class PrinterService
      * Sends plain text to a printer, writing it first to a controlled
      * temporary file.
      *
-     * @param int $printerId
+     * @param int $printerId printer id, or 0 to use the default printer
      * @param string $text
      * @param array $options
      * @param array $context

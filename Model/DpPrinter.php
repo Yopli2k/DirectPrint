@@ -78,15 +78,11 @@ class DpPrinter extends ModelClass
     /**
      * Returns the default printer, or null if none is set.
      *
-     * @return ?self
+     * @return ?static
      */
-    public static function getDefault(): ?self
+    public static function getDefault(): ?static
     {
-        foreach (self::all([Where::eq('bydefault', true)]) as $printer) {
-            return $printer;
-        }
-
-        return null;
+        return static::findWhereEq('bydefault', true);
     }
 
     /**
