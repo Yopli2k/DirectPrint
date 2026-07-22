@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    This file is part of DirectPrint plugin for FacturaScripts.
+    FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+    DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+
+    Document   : EditDpRoute.xml
+    Author     : Jose Antonio Cuello Principal <yopli2000@gmail.com>
+    Description:
+        Edit view for a print route. The slug is created by code; the admin
+        only assigns the printer (empty means the default printer).
+-->
+
+<view>
+    <columns>
+        <column name="action" numcolumns="4" order="100">
+            <widget type="text" fieldname="slug" readonly="true"/>
+        </column>
+        <column name="name" numcolumns="4" order="110">
+            <widget type="text" fieldname="name"/>
+        </column>
+        <column name="printer" numcolumns="4" order="120">
+            <widget type="select" fieldname="idprinter">
+                <values source="directprint_printers" fieldcode="id" fieldtitle="name"/>
+            </widget>
+        </column>
+    </columns>
+</view>

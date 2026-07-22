@@ -31,6 +31,7 @@ class ListDpPrinter extends ListController
     protected function createViews()
     {
         $this->createViewsPrinters();
+        $this->createViewsRoutes();
         $this->createViewsJobs();
     }
 
@@ -63,5 +64,17 @@ class ListDpPrinter extends ListController
             ->addOrderBy(['queue'], 'queue')
             ->addFilterCheckbox('active', 'active', 'active')
             ->addFilterCheckbox('bydefault', 'default', 'bydefault');
+    }
+
+    protected function createViewsRoutes(string $viewName = 'ListDpRoute'): void
+    {
+        $printers = $this->codeModel->all('directprint_printers', 'id', 'name');
+
+        $this->addView($viewName, 'DpRoute', 'routes', 'fa-solid fa-diagram-project')
+            ->addSearchFields(['slug', 'name'])
+            ->addOrderBy(['slug'], 'action', 1)
+            ->addOrderBy(['name'], 'name')
+            ->setSettings('btnNew', false)
+            ->addFilterSelect('idprinter', 'printer', 'idprinter', $printers);
     }
 }

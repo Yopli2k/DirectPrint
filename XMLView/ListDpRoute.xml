@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    This file is part of DirectPrint plugin for FacturaScripts.
+    FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+    DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+
+    Document   : ListDpRoute.xml
+    Author     : Jose Antonio Cuello Principal <yopli2000@gmail.com>
+    Description:
+        List view for the print routes. Rows are created by code (registerRoute);
+        the admin only assigns a printer to each action.
+-->
+
+<view>
+    <columns>
+        <column name="action" order="100">
+            <widget type="text" fieldname="slug"/>
+        </column>
+        <column name="name" order="110">
+            <widget type="text" fieldname="name"/>
+        </column>
+        <column name="printer" order="120">
+            <widget type="select" fieldname="idprinter">
+                <values source="directprint_printers" fieldcode="id" fieldtitle="name"/>
+            </widget>
+        </column>
+    </columns>
+</view>
