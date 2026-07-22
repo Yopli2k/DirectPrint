@@ -96,6 +96,19 @@ class DpPrinter extends ModelClass
     }
 
     /**
+     * Returns the printer with the given id, or the default one when id is 0.
+     *
+     * @param int $printerId
+     * @return ?static
+     */
+    public static function resolve(int $printerId = 0): ?static
+    {
+        return $printerId > 0
+            ? static::find($printerId)
+            : static::getDefault();
+    }
+
+    /**
      * Returns the name of the table that uses this model.
      *
      * @return string

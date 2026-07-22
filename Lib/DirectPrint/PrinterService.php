@@ -9,58 +9,45 @@
 namespace FacturaScripts\Plugins\DirectPrint\Lib\DirectPrint;
 
 use Exception;
-use FacturaScripts\Core\Model\Base\BusinessDocument;
-use FacturaScripts\Core\Session;
-use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Lib\ExportManager;
+use FacturaScripts\Dinamic\Model\Base\BusinessDocument;
 use FacturaScripts\Dinamic\Model\DpPrinter;
 use FacturaScripts\Dinamic\Model\DpPrintJob;
+use FacturaScripts\Dinamic\Model\DpRoute;
 
 /**
- * Public class to send documents to a configured printer.
- * Other plugins should only depend on this class.
+ * Public class other plugins depend on to print through DirectPrint.
+ * It only exposes the API and delegates to the specialized classes:
+ * DocumentPrinter (documents), FilePrinter (files and CUPS) and TempFile
+ * (temporary files). Consumers should only reference this class.
  *
  * Usage:
  *   $printers = PrinterService::getAvailablePrinters();
  *   $job = PrinterService::printFile($printerId, $filePath, ['copies' => 1, 'media' => 'A4']);
+ *   $job = PrinterService::printForAction('print-delivery-note', $document);
  *
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
  */
 class PrinterService
 {
     /** Allowed file extensions to print. */
-    public const ALLOWED_EXTENSIONS = ['pdf', 'txt'];
+    public const ALLOWED_EXTENSIONS = TempFile::ALLOWED_EXTENSIONS;
 
     /** Maximum file size allowed, in bytes (20 MB). */
-    public const MAX_FILE_SIZE = 20971520;
+    public const MAX_FILE_SIZE = TempFile::MAX_FILE_SIZE;
 
     /** Business document models that printDocumentById() is allowed to load by name. */
-    public const PRINTABLE_DOCUMENTS = [
-        'AlbaranCliente', 'AlbaranProveedor',
-        'FacturaCliente', 'FacturaProveedor',
-        'PedidoCliente', 'PedidoProveedor',
-        'PresupuestoCliente', 'PresupuestoProveedor',
-    ];
+    public const PRINTABLE_DOCUMENTS = DocumentPrinter::PRINTABLE_DOCUMENTS;
 
     /** Hours a temporary file is kept before the cron removes it. */
-    public const TEMP_RETENTION_HOURS = 12;
+    public const TEMP_RETENTION_HOURS = TempFile::TEMP_RETENTION_HOURS;
 
     /**
-     * Removes temporary files older than the retention limit.
-     * Called from the plugin cron.
+     * Removes temporary files older than the retention limit. Called from the cron.
      */
     public static function cleanTempFiles(): void
     {
-        $folder = self::tempFolder();
-        $limit = time() - (self::TEMP_RETENTION_HOURS * 3600);
-
-        foreach (Tools::folderScan($folder) as $file) {
-            $path = $folder . DIRECTORY_SEPARATOR . $file;
-            if (is_file($path) && filemtime($path) < $limit) {
-                @unlink($path);
-            }
-        }
+        TempFile::clean();
     }
 
     /**
@@ -87,21 +74,18 @@ class PrinterService
     }
 
     /**
-     * Return the indicated printer or default.
+     * Returns the indicated printer, or the default one when id is 0.
      *
      * @param int $printerId
      * @return DpPrinter|null
      */
     public static function getPrinter(int $printerId = 0): ?DpPrinter
     {
-        return $printerId > 0
-            ? DpPrinter::find($printerId)
-            : DpPrinter::getDefault();
+        return DpPrinter::resolve($printerId);
     }
 
     /**
-     * Sends binary contents to a printer, writing them first to a
-     * controlled temporary file.
+     * Sends binary contents to a printer.
      *
      * @param int $printerId printer id, or 0 to use the default printer
      * @param string $contents
@@ -113,57 +97,26 @@ class PrinterService
      */
     public static function printContents(int $printerId, string $contents, string $extension = 'pdf', array $options = [], array $context = []): DpPrintJob
     {
-        $file = self::writeTemp($contents, strtolower($extension));
-        if ($file === '') {
-            return self::fail(self::newJob($printerId, $context), 'temp-write-error');
-        }
-
-        return self::printFile($printerId, $file, $options, $context);
+        return FilePrinter::printContents($printerId, $contents, $extension, $options, $context);
     }
 
     /**
      * Prints an already loaded sales or purchase document (its PDF).
-     * The document is rendered with the FacturaScripts export engine.
      *
      * @param int $printerId printer id, or 0 to use the default printer
      * @param BusinessDocument $doc a loaded business document (sales or purchase)
      * @param array $options
-     * @param array $context format, source_plugin, filename...
+     * @param array $context
      * @return DpPrintJob
+     * @throws Exception
      */
     public static function printDocument(int $printerId, $doc, array $options = [], array $context = []): DpPrintJob
     {
-        // accept any sales or purchase document, without a strict type hint
-        if (false === $doc instanceof BusinessDocument) {
-            return self::fail(self::newJob($printerId, $context), 'document-not-printable');
-        }
-
-        // render the document PDF as a string
-        $lang = $doc->getSubject()->langcode ?? '';
-        $title = Tools::lang($lang)->trans($doc->modelClassName()) . ' ' . $doc->id();
-
-        $exportManager = new ExportManager();
-        $exportManager->newDoc('PDF', $title, (int)($context['format'] ?? 0), $lang);
-        $exportManager->addBusinessDocPage($doc);
-
-        $pdf = $exportManager->getDoc();
-        if (empty($pdf)) {
-            return self::fail(self::newJob($printerId, $context), 'document-pdf-error');
-        }
-
-        // fill the origin data automatically for the history
-        $context['source_model'] = $context['source_model'] ?? $doc->modelClassName();
-        $context['source_id'] = $context['source_id'] ?? (string)$doc->primaryColumnValue();
-        if (empty($context['filename'])) {
-            $context['filename'] = $title . '.pdf';
-        }
-
-        return self::printContents($printerId, $pdf, 'pdf', $options, $context);
+        return DocumentPrinter::printDocument($printerId, $doc, $options, $context);
     }
 
     /**
      * Loads a business document by model name and code, then prints it.
-     * Only the core sales and purchase documents are allowed.
      *
      * @param int $printerId printer id, or 0 to use the default printer
      * @param string $modelName e.g. 'FacturaCliente', 'AlbaranProveedor'
@@ -171,89 +124,51 @@ class PrinterService
      * @param array $options
      * @param array $context
      * @return DpPrintJob
+     * @throws Exception
      */
     public static function printDocumentById(int $printerId, string $modelName, $code, array $options = [], array $context = []): DpPrintJob
     {
-        // never build an arbitrary class: only whitelisted documents can be loaded by name
-        if (false === in_array($modelName, self::PRINTABLE_DOCUMENTS, true)) {
-            return self::fail(self::newJob($printerId, $context), 'document-not-printable');
-        }
+        return DocumentPrinter::printDocumentById($printerId, $modelName, $code, $options, $context);
+    }
 
-        $class = '\\FacturaScripts\\Dinamic\\Model\\' . $modelName;
-        $doc = new $class();
-        if (false === $doc->load($code)) {
-            return self::fail(self::newJob($printerId, $context), 'document-not-found');
-        }
-
-        return self::printDocument($printerId, $doc, $options, $context);
+    /**
+     * Resolves the printer assigned to a print action, or 0 (default printer).
+     *
+     * @param string $slug action slug registered with registerRoute()
+     * @return int
+     */
+    public static function printerIdForAction(string $slug): int
+    {
+        return DpRoute::printerId($slug);
     }
 
     /**
      * Sends a file located inside the private MyFiles folder to a printer.
-     * The file is removed after being sent to CUPS.
      *
      * @param int $printerId printer id, or 0 to use the default printer
      * @param string $filePath
      * @param array $options
-     * @param array $context source_plugin, source_model, source_id, filename
+     * @param array $context
      * @return DpPrintJob
      */
     public static function printFile(int $printerId, string $filePath, array $options = [], array $context = []): DpPrintJob
     {
-        $printer = self::getPrinter($printerId);
-        if (is_null($printer)) {
-            self::deleteTemp($filePath);
-            return self::fail(
-                self::newJob($printerId, $context),
-                'printer-not-found'
-            );
-        }
+        return FilePrinter::printFile($printerId, $filePath, $options, $context);
+    }
 
-        $job = self::newJob($printer->id, $context);
-        if (empty($job->filename)) {
-            $job->filename = basename($filePath);
-        }
-
-        // the printer must be active
-        if (false === (bool)$printer->active) {
-            self::deleteTemp($filePath);
-            return self::fail($job, 'printer-inactive');
-        }
-
-        // the queue name must be valid
-        if (1 !== preg_match('/^[A-Za-z0-9._-]+$/', (string)$printer->queue)) {
-            self::deleteTemp($filePath);
-            return self::fail($job, 'invalid-queue');
-        }
-
-        // the file must be valid and inside the allowed location
-        $error = self::validateFile($filePath);
-        if ($error !== '') {
-            self::deleteTemp($filePath);
-            return self::fail($job, $error);
-        }
-
-        $job->mimetype = self::detectMime($filePath);
-
-        // only whitelisted options reach the command
-        $safeOptions = self::sanitizeOptions($options, $printer);
-        $job->setOptions($safeOptions);
-        $job->save();
-
-        // send to CUPS
-        $result = Cups::printFile($printer->queue, realpath($filePath), $safeOptions);
-        self::deleteTemp($filePath);
-
-        if ($result['code'] !== 0) {
-            return self::fail($job, $result['error'] !== '' ? $result['error'] : 'cups-error');
-        }
-
-        $job->cups_job_id = $result['job_id'];
-        $job->error = null;
-        $job->status = DpPrintJob::STATUS_SENT;
-        $job->save();
-
-        return $job;
+    /**
+     * Prints a document choosing the printer from its action (route slug).
+     *
+     * @param string $slug action slug registered with registerRoute()
+     * @param BusinessDocument $doc a loaded business document (sales or purchase)
+     * @param array $options
+     * @param array $context
+     * @return DpPrintJob
+     * @throws Exception
+     */
+    public static function printForAction(string $slug, $doc, array $options = [], array $context = []): DpPrintJob
+    {
+        return DocumentPrinter::printForAction($slug, $doc, $options, $context);
     }
 
     /**
@@ -265,19 +180,11 @@ class PrinterService
      */
     public static function printTestPage(int $printerId): DpPrintJob
     {
-        $text = "DirectPrint - FacturaScripts\n"
-            . Tools::trans('test-page') . "\n"
-            . Tools::dateTime() . "\n";
-
-        return self::printText($printerId, $text, [], [
-            'filename' => 'directprint-test.txt',
-            'source_plugin' => 'DirectPrint',
-        ]);
+        return FilePrinter::printTestPage($printerId);
     }
 
     /**
-     * Sends plain text to a printer, writing it first to a controlled
-     * temporary file.
+     * Sends plain text to a printer.
      *
      * @param int $printerId printer id, or 0 to use the default printer
      * @param string $text
@@ -288,11 +195,20 @@ class PrinterService
      */
     public static function printText(int $printerId, string $text, array $options = [], array $context = []): DpPrintJob
     {
-        if (empty($context['filename'])) {
-            $context['filename'] = 'text.txt';
-        }
+        return FilePrinter::printText($printerId, $text, $options, $context);
+    }
 
-        return self::printContents($printerId, $text, 'txt', $options, $context);
+    /**
+     * Registers a print action (route) so the admin can assign it a printer.
+     * Idempotent: call it from the consumer plugin Init::update().
+     *
+     * @param string $slug unique action key (e.g. print-delivery-note)
+     * @param string $name human description shown in the admin
+     * @return DpRoute
+     */
+    public static function registerRoute(string $slug, string $name = ''): DpRoute
+    {
+        return DpRoute::register($slug, $name);
     }
 
     /**
@@ -302,162 +218,6 @@ class PrinterService
      */
     public static function tempFolder(): string
     {
-        $folder = Tools::folder('MyFiles', 'DirectPrint');
-        Tools::folderCheckOrCreate($folder);
-        return $folder;
-    }
-
-    /**
-     * Removes a temporary file, only if it is located inside our temp folder.
-     *
-     * @param string $filePath
-     */
-    private static function deleteTemp(string $filePath): void
-    {
-        $real = realpath($filePath);
-        if ($real === false) {
-            return;
-        }
-
-        $tmp = realpath(self::tempFolder());
-        if ($tmp !== false && str_starts_with($real, $tmp . DIRECTORY_SEPARATOR)) {
-            @unlink($real);
-        }
-    }
-
-    /**
-     * Guesses the mime type from the file extension.
-     *
-     * @param string $filePath
-     * @return string
-     */
-    private static function detectMime(string $filePath): string
-    {
-        $map = ['pdf' => 'application/pdf', 'txt' => 'text/plain'];
-        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-        return $map[$ext] ?? 'application/octet-stream';
-    }
-
-    /**
-     * Marks the job as failed, logs the message and returns it.
-     *
-     * @param DpPrintJob $job
-     * @param string $message
-     * @return DpPrintJob
-     */
-    private static function fail(DpPrintJob $job, string $message): DpPrintJob
-    {
-        $job->error = Tools::trans($message);
-        $job->status = DpPrintJob::STATUS_ERROR;
-        $job->save();
-
-        Tools::log('DirectPrint')->warning($message);
-        return $job;
-    }
-
-    /**
-     * Creates a new pending job with the context data.
-     *
-     * @param int $printerId
-     * @param array $context
-     * @return DpPrintJob
-     */
-    private static function newJob(int $printerId, array $context): DpPrintJob
-    {
-        $user = Session::user();
-
-        $job = new DpPrintJob();
-        $job->idprinter = $printerId;
-        $job->nick = empty($user->nick) ? null : $user->nick;
-        $job->filename = $context['filename'] ?? null;
-        $job->source_plugin = $context['source_plugin'] ?? null;
-        $job->source_model = $context['source_model'] ?? null;
-        $job->source_id = isset($context['source_id']) ? (string)$context['source_id'] : null;
-        return $job;
-    }
-
-    /**
-     * Keeps only the whitelisted options, taking the printer defaults
-     * when a value is missing or not allowed.
-     *
-     * @param array $options
-     * @param DpPrinter $printer
-     * @return array
-     */
-    private static function sanitizeOptions(array $options, DpPrinter $printer): array
-    {
-        $copies = isset($options['copies']) ? (int)$options['copies'] : (int)$printer->copies;
-        if ($copies < 1) {
-            $copies = 1;
-        } elseif ($copies > 100) {
-            $copies = 100;
-        }
-
-        $media = $options['media'] ?? $printer->paper;
-        if (false === in_array($media, DpPrinter::PAPER_SIZES, true)) {
-            $media = $printer->paper;
-        }
-
-        $orientation = $options['orientation'] ?? $printer->orientation;
-        if (false === in_array($orientation, DpPrinter::ORIENTATIONS, true)) {
-            $orientation = $printer->orientation;
-        }
-
-        return ['copies' => $copies, 'media' => $media, 'orientation' => $orientation];
-    }
-
-    /**
-     * Validates the file: it must exist, be inside MyFiles, have an allowed
-     * extension and not exceed the size limit. Returns '' if valid, or the
-     * translation key of the error.
-     *
-     * @param string $filePath
-     * @return string
-     */
-    private static function validateFile(string $filePath): string
-    {
-        $real = realpath($filePath);
-        if ($real === false || false === is_file($real)) {
-            return 'file-not-found';
-        }
-
-        // never allow an arbitrary path: the file must live inside MyFiles
-        $base = realpath(Tools::folder('MyFiles'));
-        if ($base === false || false === str_starts_with($real, $base . DIRECTORY_SEPARATOR)) {
-            return 'file-outside-allowed';
-        }
-
-        $ext = strtolower(pathinfo($real, PATHINFO_EXTENSION));
-        if (false === in_array($ext, self::ALLOWED_EXTENSIONS, true)) {
-            return 'file-type-not-allowed';
-        }
-
-        if (filesize($real) > self::MAX_FILE_SIZE) {
-            return 'file-too-big';
-        }
-
-        return '';
-    }
-
-    /**
-     * Writes contents to a temporary file with a secure random name.
-     * Returns the full path, or '' on error.
-     *
-     * @param string $contents
-     * @param string $extension
-     * @return string
-     * @throws Exception
-     */
-    private static function writeTemp(string $contents, string $extension): string
-    {
-        if (false === in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            return '';
-        }
-
-        $folder = self::tempFolder();
-        $name = bin2hex(random_bytes(16)) . '.' . $extension;
-        $path = $folder . DIRECTORY_SEPARATOR . $name;
-
-        return file_put_contents($path, $contents) === false ? '' : $path;
+        return TempFile::folder();
     }
 }

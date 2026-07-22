@@ -9,6 +9,7 @@
 namespace FacturaScripts\Plugins\DirectPrint\Model;
 
 use Exception;
+use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
@@ -96,6 +97,43 @@ class DpPrintJob extends ModelClass
     }
 
     /**
+     * Creates a new pending job with the context data (not saved).
+     *
+     * @param int $printerId
+     * @param array $context filename, source_plugin, source_model, source_id
+     * @return static
+     */
+    public static function create(int $printerId, array $context = []): static
+    {
+        $user = Session::user();
+
+        $job = new static();
+        $job->idprinter = $printerId;
+        $job->nick = empty($user->nick) ? null : $user->nick;
+        $job->filename = $context['filename'] ?? null;
+        $job->source_plugin = $context['source_plugin'] ?? null;
+        $job->source_model = $context['source_model'] ?? null;
+        $job->source_id = isset($context['source_id']) ? (string)$context['source_id'] : null;
+        return $job;
+    }
+
+    /**
+     * Marks the job as failed, saves it and logs the message.
+     *
+     * @param string $message translation key or raw error text
+     * @return static
+     */
+    public function fail(string $message): static
+    {
+        $this->error = Tools::trans($message);
+        $this->status = self::STATUS_ERROR;
+        $this->save();
+
+        Tools::log('DirectPrint')->warning($message);
+        return $this;
+    }
+
+    /**
      * Returns the print options as an associative array.
      *
      * @return array
@@ -120,6 +158,21 @@ class DpPrintJob extends ModelClass
 
         $printer = new DpPrinter();
         return $printer->load($this->idprinter) ? $printer : null;
+    }
+
+    /**
+     * Marks the job as accepted by CUPS and saves it.
+     *
+     * @param mixed $cupsJobId
+     * @return static
+     */
+    public function markSent($cupsJobId): static
+    {
+        $this->cups_job_id = $cupsJobId;
+        $this->error = null;
+        $this->status = self::STATUS_SENT;
+        $this->save();
+        return $this;
     }
 
     /**
