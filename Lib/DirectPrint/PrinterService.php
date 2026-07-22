@@ -9,9 +9,11 @@
 namespace FacturaScripts\Plugins\DirectPrint\Lib\DirectPrint;
 
 use Exception;
+use FacturaScripts\Core\Model\Base\BusinessDocument;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
+use FacturaScripts\Dinamic\Lib\ExportManager;
 use FacturaScripts\Dinamic\Model\DpPrinter;
 use FacturaScripts\Dinamic\Model\DpPrintJob;
 
@@ -32,6 +34,14 @@ class PrinterService
 
     /** Maximum file size allowed, in bytes (20 MB). */
     public const MAX_FILE_SIZE = 20971520;
+
+    /** Business document models that printDocumentById() is allowed to load by name. */
+    public const PRINTABLE_DOCUMENTS = [
+        'AlbaranCliente', 'AlbaranProveedor',
+        'FacturaCliente', 'FacturaProveedor',
+        'PedidoCliente', 'PedidoProveedor',
+        'PresupuestoCliente', 'PresupuestoProveedor',
+    ];
 
     /** Hours a temporary file is kept before the cron removes it. */
     public const TEMP_RETENTION_HOURS = 12;
@@ -109,6 +119,73 @@ class PrinterService
         }
 
         return self::printFile($printerId, $file, $options, $context);
+    }
+
+    /**
+     * Prints an already loaded sales or purchase document (its PDF).
+     * The document is rendered with the FacturaScripts export engine.
+     *
+     * @param int $printerId printer id, or 0 to use the default printer
+     * @param BusinessDocument $doc a loaded business document (sales or purchase)
+     * @param array $options
+     * @param array $context format, source_plugin, filename...
+     * @return DpPrintJob
+     */
+    public static function printDocument(int $printerId, $doc, array $options = [], array $context = []): DpPrintJob
+    {
+        // accept any sales or purchase document, without a strict type hint
+        if (false === $doc instanceof BusinessDocument) {
+            return self::fail(self::newJob($printerId, $context), 'directprint-document-not-printable');
+        }
+
+        // render the document PDF as a string
+        $lang = $doc->getSubject()->langcode ?? '';
+        $title = Tools::lang($lang)->trans($doc->modelClassName()) . ' ' . $doc->id();
+
+        $exportManager = new ExportManager();
+        $exportManager->newDoc('PDF', $title, (int)($context['format'] ?? 0), $lang);
+        $exportManager->addBusinessDocPage($doc);
+
+        $pdf = $exportManager->getDoc();
+        if (empty($pdf)) {
+            return self::fail(self::newJob($printerId, $context), 'directprint-document-pdf-error');
+        }
+
+        // fill the origin data automatically for the history
+        $context['source_model'] = $context['source_model'] ?? $doc->modelClassName();
+        $context['source_id'] = $context['source_id'] ?? (string)$doc->primaryColumnValue();
+        if (empty($context['filename'])) {
+            $context['filename'] = $title . '.pdf';
+        }
+
+        return self::printContents($printerId, $pdf, 'pdf', $options, $context);
+    }
+
+    /**
+     * Loads a business document by model name and code, then prints it.
+     * Only the core sales and purchase documents are allowed.
+     *
+     * @param int $printerId printer id, or 0 to use the default printer
+     * @param string $modelName e.g. 'FacturaCliente', 'AlbaranProveedor'
+     * @param mixed $code document primary key
+     * @param array $options
+     * @param array $context
+     * @return DpPrintJob
+     */
+    public static function printDocumentById(int $printerId, string $modelName, $code, array $options = [], array $context = []): DpPrintJob
+    {
+        // never build an arbitrary class: only whitelisted documents can be loaded by name
+        if (false === in_array($modelName, self::PRINTABLE_DOCUMENTS, true)) {
+            return self::fail(self::newJob($printerId, $context), 'directprint-document-not-printable');
+        }
+
+        $class = '\\FacturaScripts\\Dinamic\\Model\\' . $modelName;
+        $doc = new $class();
+        if (false === $doc->load($code)) {
+            return self::fail(self::newJob($printerId, $context), 'directprint-document-not-found');
+        }
+
+        return self::printDocument($printerId, $doc, $options, $context);
     }
 
     /**

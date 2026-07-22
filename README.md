@@ -75,6 +75,14 @@ $job = PrinterService::printContents($printerId, $pdfBinario, 'pdf');
 // 2c) o imprimir texto plano
 $job = PrinterService::printText($printerId, "Hola mundo\n");
 
+// 2d) o imprimir un documento de compra/venta ya cargado (genera su PDF)
+$job = PrinterService::printDocument($printerId, $factura);
+
+// 2e) o imprimir un documento por modelo + código, sin cargarlo tú
+$job = PrinterService::printDocumentById($printerId, 'FacturaCliente', $factura->idfactura, [], [
+    'format' => 0, // opcional: id de FormatoDocumento (0 = formato por defecto)
+]);
+
 // 3) comprobar el resultado
 if ($job->status === $job::STATUS_SENT) {
     // aceptado por CUPS (id del trabajo en $job->cups_job_id)
@@ -87,6 +95,10 @@ if ($job->status === $job::STATUS_SENT) {
 
 - El servicio devuelve siempre un `DpPrintJob`, que además queda registrado en el historial.
 - El estado `STATUS_SENT` significa **"Enviado a CUPS"**, no que el papel haya salido físicamente.
+- `printDocument()` acepta cualquier documento de compra o venta ya cargado (factura, albarán,
+  pedido o presupuesto, de cliente o proveedor). `printDocumentById()` solo carga por nombre los
+  8 tipos del core (lista blanca `PRINTABLE_DOCUMENTS`); rellena `source_model` y `source_id` del
+  trabajo automáticamente.
 - `printFile()` solo acepta ficheros ubicados dentro de `MyFiles` (carpeta privada). Usa
   `PrinterService::tempFolder()` para obtener la ubicación recomendada.
 - Solo se admiten las extensiones `pdf` y `txt`, con un tamaño máximo de 20 MB.
