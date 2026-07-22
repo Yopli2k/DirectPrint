@@ -12,13 +12,13 @@
 
 <view>
     <columns>
-        <column name="name" numcolumns="6" order="100">
+        <column name="name" numcolumns="3" order="100">
             <widget type="text" fieldname="name" required="true"/>
         </column>
-        <column name="queue" numcolumns="6" order="110">
-            <widget type="text" fieldname="queue" required="true"/>
+        <column name="queue" numcolumns="3" order="110">
+            <widget type="select" fieldname="queue" required="true"/>
         </column>
-        <column name="paper" numcolumns="3" order="120">
+        <column name="paper" numcolumns="2" order="120">
             <widget type="select" fieldname="paper">
                 <values title="A4">A4</values>
                 <values title="A5">A5</values>
@@ -26,8 +26,8 @@
                 <values title="Legal">Legal</values>
             </widget>
         </column>
-        <column name="orientation" numcolumns="3" order="130">
-            <widget type="select" fieldname="orientation">
+        <column name="orientation" numcolumns="2" order="130">
+            <widget type="select" fieldname="orientation" translate="true">
                 <values title="portrait">portrait</values>
                 <values title="landscape">landscape</values>
             </widget>

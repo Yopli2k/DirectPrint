@@ -47,13 +47,11 @@
         <name>orientation</name>
         <type>character varying(20)</type>
         <null>NO</null>
-        <default>portrait</default>
     </column>
     <column>
         <name>paper</name>
         <type>character varying(20)</type>
         <null>NO</null>
-        <default>A4</default>
     </column>
     <column>
         <name>queue</name>

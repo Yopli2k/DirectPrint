@@ -19,10 +19,18 @@
             <widget type="text" fieldname="queue"/>
         </column>
         <column name="paper" order="120">
-            <widget type="text" fieldname="paper"/>
+            <widget type="select" fieldname="paper">
+                <values title="A4">A4</values>
+                <values title="A5">A5</values>
+                <values title="Letter">Letter</values>
+                <values title="Legal">Legal</values>
+            </widget>
         </column>
         <column name="orientation" order="130">
-            <widget type="text" fieldname="orientation"/>
+            <widget type="select" fieldname="orientation" translate="true">
+                <values title="portrait">portrait</values>
+                <values title="landscape">landscape</values>
+            </widget>
         </column>
         <column name="copies" display="right" order="140">
             <widget type="number" fieldname="copies"/>
