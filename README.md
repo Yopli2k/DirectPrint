@@ -5,13 +5,13 @@ administrar una lista de impresoras y ofrece un servicio reutilizable para que o
 envíen ficheros PDF o texto a una impresora sin abrir el PDF en el navegador.
 
 El núcleo trabaja **solo con ficheros**: no contiene lógica para generar facturas, albaranes u
-otros documentos. Esa integración se hace desde los plugins que lo necesiten.
+otros documentos, aunque si permite imprimir documentos ya creados. 
+La creación de dichos documentos debe hacerse desde los plugins que lo necesiten.
 
 ## Requisitos del servidor
 
-- Servidor Linux (Ubuntu / Debian) con **CUPS** instalado.
-- Comandos `lp` y `lpstat` accesibles en el `PATH` del usuario que ejecuta PHP (normalmente
-  `www-data`).
+- Servidor Linux (Ubuntu / Debian / MacOS) con **CUPS** instalado.
+- Comandos `lp` y `lpstat` accesibles en el `PATH` del usuario que ejecuta PHP (normalmente `www-data`).
 
 ## Configurar una impresora CUPS
 
@@ -107,7 +107,53 @@ if ($job->status === $job::STATUS_SENT) {
 - Los ficheros temporales se borran tras enviarlos a CUPS; un cron limpia además los que hayan
   quedado por errores o interrupciones.
 
-## Historial
+## Imprimir por acción (recomendado)
 
-En **Admin → Impresoras → Historial** se consultan todos los trabajos con filtros por fecha,
-impresora, estado y usuario.
+Para no tener que elegir una impresora concreta en el código de cada plugin, DirectPrint ofrece
+un mapeo **acción → impresora**. Tu plugin registra una **acción** con una clave semántica y luego
+imprime *por esa acción*; es el administrador quien, desde **Admin → Impresoras → Acciones de
+impresión**, decide la impresora de cada acción. Si no asigna ninguna, se usa la impresora
+predeterminada.
+
+Declara DirectPrint como **compatible** (no requerido) en tu `facturascripts.ini`, para que tu
+plugin funcione aunque DirectPrint no esté instalado:
+
+```ini
+compatible = 'DirectPrint'
+```
+
+Registra las acciones una sola vez en el `update()` de tu `Init.php` (es idempotente y nunca pisa
+la impresora que haya elegido el administrador):
+
+```php
+use FacturaScripts\Core\Plugins;
+use FacturaScripts\Plugins\DirectPrint\Lib\DirectPrint\PrinterService;
+
+public function update(): void
+{
+    if (Plugins::isEnabled('DirectPrint')) {
+        PrinterService::registerRoute('print-delivery-note', 'Albarán al cerrar preparación');
+    }
+}
+```
+
+Imprime siempre bajo la guarda `Plugins::isEnabled('DirectPrint')`. Para documentos de compra/venta
+usa `printForAction()`, que resuelve la impresora y genera el PDF:
+
+```php
+if (Plugins::isEnabled('DirectPrint')) {
+    PrinterService::printForAction('print-delivery-note', $albaran);
+}
+```
+
+Si necesitas imprimir un fichero o texto (por ejemplo una etiqueta), resuelve tú la impresora con
+`printerIdForAction()` (devuelve `0` = impresora predeterminada cuando la acción no tiene impresora
+asignada) y pásasela a `printFile()` o `printText()`:
+
+```php
+$printerId = PrinterService::printerIdForAction('print-shipping-label');
+PrinterService::printFile($printerId, $rutaEtiqueta);
+```
+
+Ver la guía de usuario en `Docs/06-rutas-de-impresion.md` y la técnica de integración en
+`Docs/53-integrar-un-plugin.md`.
