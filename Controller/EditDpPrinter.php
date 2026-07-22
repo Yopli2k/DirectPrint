@@ -109,14 +109,14 @@ class EditDpPrinter extends EditController
                 'action' => 'check-queue',
                 'color' => 'info',
                 'icon' => 'fa-solid fa-plug',
-                'label' => 'directprint-check-queue',
+                'label' => 'check-queue',
                 'type' => 'action',
             ])
             ->addButton([
                 'action' => 'test-print',
                 'color' => 'warning',
                 'icon' => 'fa-solid fa-print',
-                'label' => 'directprint-test-print',
+                'label' => 'test-print',
                 'type' => 'action',
             ]);
     }
@@ -138,11 +138,11 @@ class EditDpPrinter extends EditController
         }
 
         if (Cups::queueExists($printer->queue)) {
-            Tools::log()->notice('directprint-queue-found', ['%queue%' => $printer->queue]);
+            Tools::log()->notice('queue-found', ['%queue%' => $printer->queue]);
             return;
         }
 
-        Tools::log()->warning('directprint-queue-not-found', ['%queue%' => $printer->queue]);
+        Tools::log()->warning('queue-not-found', ['%queue%' => $printer->queue]);
     }
 
     /**
@@ -183,10 +183,10 @@ class EditDpPrinter extends EditController
 
         $job = PrinterService::printTestPage($printer->id);
         if ($job->status === DpPrintJob::STATUS_SENT) {
-            Tools::log()->notice('directprint-test-sent', ['%job%' => (int)$job->cups_job_id]);
+            Tools::log()->notice('test-sent', ['%job%' => (int)$job->cups_job_id]);
             return;
         }
 
-        Tools::log()->warning('directprint-test-error');
+        Tools::log()->warning('test-error');
     }
 }

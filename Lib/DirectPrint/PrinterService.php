@@ -115,7 +115,7 @@ class PrinterService
     {
         $file = self::writeTemp($contents, strtolower($extension));
         if ($file === '') {
-            return self::fail(self::newJob($printerId, $context), 'directprint-temp-write-error');
+            return self::fail(self::newJob($printerId, $context), 'temp-write-error');
         }
 
         return self::printFile($printerId, $file, $options, $context);
@@ -135,7 +135,7 @@ class PrinterService
     {
         // accept any sales or purchase document, without a strict type hint
         if (false === $doc instanceof BusinessDocument) {
-            return self::fail(self::newJob($printerId, $context), 'directprint-document-not-printable');
+            return self::fail(self::newJob($printerId, $context), 'document-not-printable');
         }
 
         // render the document PDF as a string
@@ -148,7 +148,7 @@ class PrinterService
 
         $pdf = $exportManager->getDoc();
         if (empty($pdf)) {
-            return self::fail(self::newJob($printerId, $context), 'directprint-document-pdf-error');
+            return self::fail(self::newJob($printerId, $context), 'document-pdf-error');
         }
 
         // fill the origin data automatically for the history
@@ -176,13 +176,13 @@ class PrinterService
     {
         // never build an arbitrary class: only whitelisted documents can be loaded by name
         if (false === in_array($modelName, self::PRINTABLE_DOCUMENTS, true)) {
-            return self::fail(self::newJob($printerId, $context), 'directprint-document-not-printable');
+            return self::fail(self::newJob($printerId, $context), 'document-not-printable');
         }
 
         $class = '\\FacturaScripts\\Dinamic\\Model\\' . $modelName;
         $doc = new $class();
         if (false === $doc->load($code)) {
-            return self::fail(self::newJob($printerId, $context), 'directprint-document-not-found');
+            return self::fail(self::newJob($printerId, $context), 'document-not-found');
         }
 
         return self::printDocument($printerId, $doc, $options, $context);
@@ -205,7 +205,7 @@ class PrinterService
             self::deleteTemp($filePath);
             return self::fail(
                 self::newJob($printerId, $context),
-                'directprint-printer-not-found'
+                'printer-not-found'
             );
         }
 
@@ -217,13 +217,13 @@ class PrinterService
         // the printer must be active
         if (false === (bool)$printer->active) {
             self::deleteTemp($filePath);
-            return self::fail($job, 'directprint-printer-inactive');
+            return self::fail($job, 'printer-inactive');
         }
 
         // the queue name must be valid
         if (1 !== preg_match('/^[A-Za-z0-9._-]+$/', (string)$printer->queue)) {
             self::deleteTemp($filePath);
-            return self::fail($job, 'directprint-invalid-queue');
+            return self::fail($job, 'invalid-queue');
         }
 
         // the file must be valid and inside the allowed location
@@ -245,7 +245,7 @@ class PrinterService
         self::deleteTemp($filePath);
 
         if ($result['code'] !== 0) {
-            return self::fail($job, $result['error'] !== '' ? $result['error'] : 'directprint-cups-error');
+            return self::fail($job, $result['error'] !== '' ? $result['error'] : 'cups-error');
         }
 
         $job->cups_job_id = $result['job_id'];
@@ -266,7 +266,7 @@ class PrinterService
     public static function printTestPage(int $printerId): DpPrintJob
     {
         $text = "DirectPrint - FacturaScripts\n"
-            . Tools::trans('directprint-test-page') . "\n"
+            . Tools::trans('test-page') . "\n"
             . Tools::dateTime() . "\n";
 
         return self::printText($printerId, $text, [], [
@@ -418,22 +418,22 @@ class PrinterService
     {
         $real = realpath($filePath);
         if ($real === false || false === is_file($real)) {
-            return 'directprint-file-not-found';
+            return 'file-not-found';
         }
 
         // never allow an arbitrary path: the file must live inside MyFiles
         $base = realpath(Tools::folder('MyFiles'));
         if ($base === false || false === str_starts_with($real, $base . DIRECTORY_SEPARATOR)) {
-            return 'directprint-file-outside-allowed';
+            return 'file-outside-allowed';
         }
 
         $ext = strtolower(pathinfo($real, PATHINFO_EXTENSION));
         if (false === in_array($ext, self::ALLOWED_EXTENSIONS, true)) {
-            return 'directprint-file-type-not-allowed';
+            return 'file-type-not-allowed';
         }
 
         if (filesize($real) > self::MAX_FILE_SIZE) {
-            return 'directprint-file-too-big';
+            return 'file-too-big';
         }
 
         return '';

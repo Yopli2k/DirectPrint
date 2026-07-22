@@ -119,20 +119,20 @@ class DpPrinter extends ModelClass
         $this->queue = Tools::noHtml(trim($this->queue ?? ''));
 
         if (empty($this->name)) {
-            Tools::log()->warning('directprint-name-required');
+            Tools::log()->warning('name-required');
             return false;
         }
 
         // the CUPS queue name must be a safe identifier
         if (1 !== preg_match('/^[A-Za-z0-9._-]+$/', $this->queue)) {
-            Tools::log()->warning('directprint-invalid-queue', ['%queue%' => $this->queue]);
+            Tools::log()->warning('invalid-queue', ['%queue%' => $this->queue]);
             return false;
         }
 
         // the visible name must be unique
         foreach (self::all([Where::eq('name', $this->name)]) as $printer) {
             if ($printer->id != $this->id) {
-                Tools::log()->warning('directprint-duplicate-name', ['%name%' => $this->name]);
+                Tools::log()->warning('duplicate-name', ['%name%' => $this->name]);
                 return false;
             }
         }

@@ -46,10 +46,10 @@ class ListDpPrinter extends ListController
             ->addFilterSelect('idprinter', 'printer', 'idprinter', $printers)
             ->addFilterSelect('status', 'status', 'status', [
                 '' => '------',
-                DpPrintJob::STATUS_PENDING => Tools::trans('directprint-status-pending'),
-                DpPrintJob::STATUS_SENT => Tools::trans('directprint-status-sent'),
-                DpPrintJob::STATUS_ERROR => Tools::trans('directprint-status-error'),
-                DpPrintJob::STATUS_CANCELLED => Tools::trans('directprint-status-cancelled'),
+                DpPrintJob::STATUS_PENDING => Tools::trans('pending'),
+                DpPrintJob::STATUS_SENT => Tools::trans('sent'),
+                DpPrintJob::STATUS_ERROR => Tools::trans('common-error'),
+                DpPrintJob::STATUS_CANCELLED => Tools::trans('cancelled'),
             ])
             ->addFilterAutocomplete('nick', 'user', 'nick', 'users')
             ->addFilterPeriod('creation_date', 'period', 'creation_date', true);
