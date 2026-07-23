@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    This file is part of DirectPrint plugin for FacturaScripts.
+    FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+    DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+
+    Document   : EditDpPrinterNote.xml
+    Author     : Jose Antonio Cuello Principal <yopli2000@gmail.com>
+    Description:
+        Edit view for the notes of a configured printer.
+-->
+
+<view>
+    <columns>
+        <column name="id" numcolumns="1" display="none" order="100">
+            <widget type="number" fieldname="id" readonly="true" required="true"/>
+        </column>
+        <column name="notes" numcolumns="12" order="110">
+            <widget type="textarea" fieldname="notes" rows="5"/>
+        </column>
+    </columns>
+</view>

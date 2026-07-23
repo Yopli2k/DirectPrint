@@ -12,8 +12,10 @@ use Exception;
 use FacturaScripts\Core\Lib\ExtendedController\BaseView;
 use FacturaScripts\Core\Lib\ExtendedController\EditController;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\DpPrinter;
 use FacturaScripts\Dinamic\Model\DpPrintJob;
+use FacturaScripts\Dinamic\Model\DpRoute;
 use FacturaScripts\Plugins\DirectPrint\Lib\DirectPrint\Cups;
 use FacturaScripts\Plugins\DirectPrint\Lib\DirectPrint\PrinterService;
 
@@ -24,6 +26,14 @@ use FacturaScripts\Plugins\DirectPrint\Lib\DirectPrint\PrinterService;
  */
 class EditDpPrinter extends EditController
 {
+    public array $assignedRoutes = [];
+
+    public array $unassignedRoutes = [];
+
+    private const VIEW_NOTES = 'EditDpPrinterNote';
+
+    private const VIEW_ROUTES = 'DpPrinterRoutes';
+
     /**
      * Returns the class name of the model to use in the editView.
      */
@@ -52,6 +62,8 @@ class EditDpPrinter extends EditController
     protected function createViews()
     {
         parent::createViews();
+        $this->createViewsRoutes();
+        $this->createViewsNotes();
         $this->setTabsPosition('bottom');
     }
 
@@ -66,12 +78,20 @@ class EditDpPrinter extends EditController
     protected function execPreviousAction($action)
     {
         switch ($action) {
+            case 'assign-route':
+                $this->assignRouteAction();
+                break;
+
             case 'check-queue':
                 $this->checkQueueAction();
                 break;
 
             case 'test-print':
                 $this->testPrintAction();
+                break;
+
+            case 'unassign-route':
+                $this->unassignRouteAction();
                 break;
         }
 
@@ -86,14 +106,32 @@ class EditDpPrinter extends EditController
      */
     protected function loadData($viewName, $view)
     {
-        parent::loadData($viewName, $view);
+        switch ($viewName) {
+            case self::VIEW_NOTES:
+                $view->model = $this->getModel();
+                break;
 
-        if ($viewName === $this->mainTabName()) {
-            $this->loadQueuesWidget($view);
+            case self::VIEW_ROUTES:
+                $id = (int)$this->getModel()->id();
+                $this->assignedRoutes = empty($id)
+                    ? []
+                    : DpRoute::all([Where::eq('idprinter', $id)], ['slug' => 'ASC']);
 
-            if ($view->model->exists()) {
-                $this->addTestButtons();
-            }
+                $this->unassignedRoutes = empty($id)
+                    ? []
+                    : DpRoute::all([Where::isNull('idprinter')], ['slug' => 'ASC']);
+                break;
+
+            default:
+                parent::loadData($viewName, $view);
+                if ($viewName === $this->mainTabName()) {
+                    $this->loadQueuesWidget($view);
+
+                    if ($view->model->exists()) {
+                        $this->addTestButtons();
+                    }
+                }
+                break;
         }
     }
 
@@ -122,6 +160,33 @@ class EditDpPrinter extends EditController
     }
 
     /**
+     * Assigns the selected print action to the current printer.
+     *
+     * @return void
+     */
+    private function assignRouteAction(): void
+    {
+        if (false === $this->permissions->allowUpdate) {
+            Tools::log()->warning('not-allowed-modify');
+            return;
+        }
+
+        if (false === $this->validateFormToken()) {
+            return;
+        }
+
+        $route = new DpRoute();
+        if (false === $route->load($this->request->input('idroute'))) {
+            return;
+        }
+
+        $route->idprinter = (int)$this->request->input('idprinter');
+        if ($route->save()) {
+            Tools::log()->notice('record-updated-correctly');
+        }
+    }
+
+    /**
      * Process for test the CUPS queue.
      *
      * @return void
@@ -143,6 +208,32 @@ class EditDpPrinter extends EditController
         }
 
         Tools::log()->warning('queue-not-found', ['%queue%' => $printer->queue]);
+    }
+
+    /**
+     * Add view for edit the notes of a configured printer.
+     *
+     * @return void
+     */
+    private function createViewsNotes(): void
+    {
+        $this->addEditView(self::VIEW_NOTES, 'DpPrinter', 'notes', 'fa-solid fa-sticky-note');
+    }
+
+    /**
+     * Add the tab with the print actions of this printer.
+     *
+     * @return void
+     */
+    private function createViewsRoutes(): void
+    {
+        $this->addHtmlView(
+            self::VIEW_ROUTES,
+            'Tab/DpPrinterRoutes',
+            'DpRoute',
+            'print-actions',
+            'fa-solid fa-diagram-project'
+        );
     }
 
     /**
@@ -188,5 +279,32 @@ class EditDpPrinter extends EditController
         }
 
         Tools::log()->warning('test-error');
+    }
+
+    /**
+     * Removes the printer from the selected print action.
+     *
+     * @return void
+     */
+    private function unassignRouteAction(): void
+    {
+        if (false === $this->permissions->allowUpdate) {
+            Tools::log()->warning('not-allowed-modify');
+            return;
+        }
+
+        if (false === $this->validateFormToken()) {
+            return;
+        }
+
+        $route = new DpRoute();
+        if (false === $route->load($this->request->input('idroute'))) {
+            return;
+        }
+
+        $route->idprinter = null;
+        if ($route->save()) {
+            Tools::log()->notice('record-updated-correctly');
+        }
     }
 }

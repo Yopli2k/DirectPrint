@@ -1,0 +1,74 @@
+{#
+/**
+ * This file is part of DirectPrint plugin for FacturaScripts.
+ * FacturaScripts Copyright (C) 2015-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * DirectPrint    Copyright (C) 2026 Jose Antonio Cuello Principal <yopli2000@gmail.com>
+ *
+ * This program and its files are under the terms of the license specified in the LICENSE file.
+ */
+#}
+{% set printer = fsc.getModel() %}
+
+<div class="container-fluid">
+    <div class="row">
+        {# -- Print actions assigned to this printer -- #}
+        <div class="col-md-6">
+            <div class="card shadow mb-3">
+                <div class="card-header">
+                    <i class="fa-solid fa-diagram-project fa-fw" aria-hidden="true"></i> {{ trans('printer-actions') }}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for route in fsc.assignedRoutes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <div>{{ route.name ?: route.slug }}</div>
+                                <small class="text-muted">{{ route.slug }}</small>
+                            </div>
+                            <form action="{{ printer.url() }}" method="post" onsubmit="animateSpinner('add')">
+                                {{ formToken() }}
+                                <input type="hidden" name="action" value="unassign-route"/>
+                                <input type="hidden" name="activetab" value="DpPrinterRoutes"/>
+                                <input type="hidden" name="idroute" value="{{ route.id }}"/>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa-solid fa-xmark fa-fw" aria-hidden="true"></i> {{ trans('remove') }}
+                                </button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">{{ trans('no-printer-actions') }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {# -- Print actions without printer -- #}
+        <div class="col-md-6">
+            <div class="card shadow mb-3">
+                <div class="card-header">
+                    <i class="fa-solid fa-link-slash fa-fw" aria-hidden="true"></i> {{ trans('actions-without-printer') }}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for route in fsc.unassignedRoutes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <div>{{ route.name ?: route.slug }}</div>
+                                <small class="text-muted">{{ route.slug }}</small>
+                            </div>
+                            <form action="{{ printer.url() }}" method="post" onsubmit="animateSpinner('add')">
+                                {{ formToken() }}
+                                <input type="hidden" name="action" value="assign-route"/>
+                                <input type="hidden" name="activetab" value="DpPrinterRoutes"/>
+                                <input type="hidden" name="idroute" value="{{ route.id }}"/>
+                                <input type="hidden" name="idprinter" value="{{ printer.id }}"/>
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="fa-solid fa-plus fa-fw" aria-hidden="true"></i> {{ trans('assign') }}
+                                </button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">{{ trans('no-free-actions') }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
