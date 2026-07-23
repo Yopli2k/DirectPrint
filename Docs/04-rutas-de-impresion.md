@@ -14,6 +14,12 @@ Cada fila muestra la acción (su clave), una descripción legible y la impresora
 
 Haz clic en una acción para abrir su ficha y elige la impresora en el desplegable **Impresora**. Guarda y listo: a partir de ese momento, cada vez que un plugin imprima usando esa acción, el trabajo saldrá por esa impresora.
 
+## Asignar acciones desde la ficha de la impresora
+
+También puedes gestionarlo desde el otro lado: abre una impresora en **Admin → Impresoras** y, en su ficha, ve a la pestaña **Acciones de impresión**. Verás dos listas: a la izquierda las acciones que ya imprimen en esta impresora, y a la derecha las acciones que aún no tienen impresora asignada.
+
+Pulsa **Asignar** en una acción de la derecha para que pase a imprimir en esta impresora, o **Quitar** en una de la izquierda para dejarla sin impresora (con lo que vuelve a la predeterminada). Es la misma asignación que en la pestaña general, pero centrada en una impresora concreta, cómodo cuando quieres ver de un vistazo todo lo que sale por ella.
+
 ## Qué pasa si no asignas impresora
 
 Si dejas la impresora vacía, la acción usa la **impresora predeterminada** (la que tenga marcada la casilla "Predeterminada" en su ficha). Así, con solo tener una impresora marcada como predeterminada, todas las acciones funcionan aunque no las hayas configurado una a una.
