@@ -37,7 +37,7 @@ class FilePrinter
     {
         $file = TempFile::write($contents, strtolower($extension));
         if ($file === '') {
-            return DpPrintJob::create($printerId, $context)->fail('temp-write-error');
+            return DpPrintJob::newJob($printerId, $context)->fail('temp-write-error');
         }
 
         return self::printFile($printerId, $file, $options, $context);
@@ -58,10 +58,10 @@ class FilePrinter
         $printer = DpPrinter::resolve($printerId);
         if (is_null($printer)) {
             TempFile::delete($filePath);
-            return DpPrintJob::create($printerId, $context)->fail('printer-not-found');
+            return DpPrintJob::newJob($printerId, $context)->fail('printer-not-found');
         }
 
-        $job = DpPrintJob::create($printer->id, $context);
+        $job = DpPrintJob::newJob($printer->id, $context);
         if (empty($job->filename)) {
             $job->filename = basename($filePath);
         }

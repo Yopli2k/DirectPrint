@@ -97,27 +97,6 @@ class DpPrintJob extends ModelClass
     }
 
     /**
-     * Creates a new pending job with the context data (not saved).
-     *
-     * @param int $printerId
-     * @param array $context filename, source_plugin, source_model, source_id
-     * @return static
-     */
-    public static function create(int $printerId, array $context = []): static
-    {
-        $user = Session::user();
-
-        $job = new static();
-        $job->idprinter = $printerId;
-        $job->nick = empty($user->nick) ? null : $user->nick;
-        $job->filename = $context['filename'] ?? null;
-        $job->source_plugin = $context['source_plugin'] ?? null;
-        $job->source_model = $context['source_model'] ?? null;
-        $job->source_id = isset($context['source_id']) ? (string)$context['source_id'] : null;
-        return $job;
-    }
-
-    /**
      * Marks the job as failed, saves it and logs the message.
      *
      * @param string $message translation key or raw error text
@@ -173,6 +152,27 @@ class DpPrintJob extends ModelClass
         $this->status = self::STATUS_SENT;
         $this->save();
         return $this;
+    }
+
+    /**
+     * Creates a new pending job with the context data (not saved).
+     *
+     * @param int $printerId
+     * @param array $context filename, source_plugin, source_model, source_id
+     * @return static
+     */
+    public static function newJob(int $printerId, array $context = []): static
+    {
+        $user = Session::user();
+
+        $job = new static();
+        $job->idprinter = $printerId;
+        $job->nick = empty($user->nick) ? null : $user->nick;
+        $job->filename = $context['filename'] ?? null;
+        $job->source_plugin = $context['source_plugin'] ?? null;
+        $job->source_model = $context['source_model'] ?? null;
+        $job->source_id = isset($context['source_id']) ? (string)$context['source_id'] : null;
+        return $job;
     }
 
     /**

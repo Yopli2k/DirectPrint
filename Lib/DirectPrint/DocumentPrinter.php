@@ -46,7 +46,7 @@ class DocumentPrinter
     {
         // accept any sales or purchase document, without a strict type hint
         if (false === $doc instanceof BusinessDocument) {
-            return DpPrintJob::create($printerId, $context)->fail('document-not-printable');
+            return DpPrintJob::newJob($printerId, $context)->fail('document-not-printable');
         }
 
         // render the document PDF as a string
@@ -59,7 +59,7 @@ class DocumentPrinter
 
         $pdf = $exportManager->getDoc();
         if (empty($pdf)) {
-            return DpPrintJob::create($printerId, $context)->fail('document-pdf-error');
+            return DpPrintJob::newJob($printerId, $context)->fail('document-pdf-error');
         }
 
         // fill the origin data automatically for the history
@@ -88,13 +88,13 @@ class DocumentPrinter
     {
         // never build an arbitrary class: only whitelisted documents can be loaded by name
         if (false === in_array($modelName, self::PRINTABLE_DOCUMENTS, true)) {
-            return DpPrintJob::create($printerId, $context)->fail('document-not-printable');
+            return DpPrintJob::newJob($printerId, $context)->fail('document-not-printable');
         }
 
         $class = '\\FacturaScripts\\Dinamic\\Model\\' . $modelName;
         $doc = new $class();
         if (false === $doc->load($code)) {
-            return DpPrintJob::create($printerId, $context)->fail('document-not-found');
+            return DpPrintJob::newJob($printerId, $context)->fail('document-not-found');
         }
 
         return self::printDocument($printerId, $doc, $options, $context);
