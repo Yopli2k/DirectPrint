@@ -70,7 +70,7 @@ class ListDpPrinter extends ListController
     {
         $printers = $this->codeModel->all('directprint_printers', 'id', 'name');
 
-        $this->addView($viewName, 'DpRoute', 'routes', 'fa-solid fa-diagram-project')
+        $this->addView($viewName, 'DpRoute', 'print-actions', 'fa-solid fa-diagram-project')
             ->addSearchFields(['slug', 'name'])
             ->addOrderBy(['slug'], 'action', 1)
             ->addOrderBy(['name'], 'name')

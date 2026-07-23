@@ -126,7 +126,7 @@ class DpRoute extends ModelClass
         $this->slug = Tools::noHtml(trim($this->slug ?? ''));
 
         if (empty($this->slug)) {
-            Tools::log()->warning('slug-required');
+            Tools::log()->warning('print-action-required');
             return false;
         }
 

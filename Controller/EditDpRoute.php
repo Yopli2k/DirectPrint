@@ -34,7 +34,7 @@ class EditDpRoute extends EditController
     {
         $data = parent::getPageData();
         $data['menu'] = 'admin';
-        $data['title'] = 'route';
+        $data['title'] = 'print-action';
         $data['icon'] = 'fa-solid fa-diagram-project';
         return $data;
     }
